@@ -1,7 +1,7 @@
 version: '3'
 services:
   portainer:
-    image: portainer/portainer
+    image: portainer/portainer:linux-arm
     container_name: portainer
     command: -H unix:///var/run/docker.sock
     restart: ${RESTARTPOLICY}
@@ -19,7 +19,7 @@ services:
       - traefik.frontend.entryPoints=http
 
   watchtower:
-    image: containrrr/watchtower
+    image: containrrr/watchtower:arm64v8-latest
     container_name: watchtower
     restart: ${RESTARTPOLICY}
     networks:
@@ -28,7 +28,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   traefik:
-    image: traefik:v1.7
+    image: arm64v8/traefik:1.7
     container_name: traefik
     restart: ${RESTARTPOLICY}
     ports:
@@ -48,20 +48,17 @@ services:
       - traefik.frontend.entryPoints=http
 
   transmission:
-    image: haugene/transmission-openvpn
+    image: linuxserver/transmission:arm64v8-latest
     container_name: transmission
     restart: ${RESTARTPOLICY}
     depends_on:
       - traefik
     networks:
       - torrent_net
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun
     ports:
       - 9091:9091
-      - 8888:8888
+      - 51413:51413
+      - 51413:51413/udp
     dns:
       - 1.1.1.1
       - 1.0.0.1
@@ -69,49 +66,15 @@ services:
       - ${DATAFOLDER}/transmission:/data
       - ${MOUNTFOLDER}/transmission/completed:/completed
     environment:
-      - OPENVPN_PROVIDER=${VPNPROVIDER}
-      - OPENVPN_USERNAME=${VPNUSER}
-      - OPENVPN_PASSWORD=${VPNPASS}
-      - OPENVPN_OPTS=--inactive 3600 --ping 10 --ping-exit 60
-      - TRANSMISSION_WEB_UI=transmission-web-control # OPTIONAL - just a different UI
-      - TRANSMISSION_DOWNLOAD_QUEUE_SIZE=25
-      - TRANSMISSION_MAX_PEERS_GLOBAL=3000
-      - TRANSMISSION_PEER_LIMIT_GLOBAL=3000
-      - TRANSMISSION_PEER_LIMIT_PER_TORRENT=300
-      - TRANSMISSION_DOWNLOAD_DIR=/completed
-      - TRANSMISSION_RATIO_LIMIT=${RATIO_LIMIT}
-      - TRANSMISSION_RATIO_LIMIT_ENABLED=${RATIO_ENABLED}
-      - HEALTH_CHECK_HOST=google.com
       - TZ=${TZ}
-      - WEBPROXY_ENABLED=true
-      - WEBPROXY_PORT=8888
-
-  proxy:
-    image: haugene/transmission-openvpn-proxy
-    container_name: proxy
-    restart: ${RESTARTPOLICY}
-    networks:
-      - torrent_net
-      - web
-    depends_on:
-      - transmission
-    environment:
-      - TZ=${TZ}
-    ports:
-      - 8081:8080
-    labels:
-      - traefik.enable=true
-      - traefik.frontend.rule=Host:transmission.${LOCALDOMAIN}
-      - traefik.port=8080
-      - traefik.frontend.entryPoints=http
+      - TRANSMISSION_WEB_HOME=/combustion-release/
 
   jackett:
-    image: linuxserver/jackett
+    image: linuxserver/jackett:arm64v8-latest
     container_name: jackett
     restart: ${RESTARTPOLICY}
     depends_on:
       - traefik
-      - proxy
     networks:
       - torrent_net
       - web
@@ -133,7 +96,7 @@ services:
       - traefik.frontend.entryPoints=http
 
   sonarr:
-    image: linuxserver/sonarr
+    image: linuxserver/sonarr:arm64v8-latest
     container_name: sonarr
     restart: ${RESTARTPOLICY}
     networks:
@@ -144,7 +107,6 @@ services:
       - jackett
       - traefik
       - plex
-      - proxy
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -165,7 +127,7 @@ services:
       - 8989:8989
 
   radarr:
-    image: linuxserver/radarr
+    image: linuxserver/radarr:arm64v8-3.0.0.2290-ls37
     container_name: radarr
     restart: ${RESTARTPOLICY}
     networks:
@@ -176,7 +138,6 @@ services:
       - jackett
       - traefik
       - plex
-      - proxy
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -197,7 +158,7 @@ services:
       - 7878:7878
 
   ombi:
-    image: linuxserver/ombi
+    image: linuxserver/ombi:arm64v8-latest
     container_name: ombi
     restart: ${RESTARTPOLICY}
     depends_on:
@@ -226,7 +187,7 @@ services:
       - 3579:3579
 
   plex:
-    image: plexinc/pms-docker
+    image: greensheep/plex-server-docker-rpi:latest
     container_name: plex
     restart: ${RESTARTPOLICY}
     depends_on:
